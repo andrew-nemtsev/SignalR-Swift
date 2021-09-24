@@ -20,6 +20,8 @@ public typealias ConnectionStateChangedClosure = ((ConnectionState) -> ())
 public typealias ConnectionConnectionSlowClosure = (() -> ())
 
 public class Connection: ConnectionProtocol {
+    static var userAgentPrefix: String = ""
+    
     var defaultAbortTimeout = 30.0
     var assemblyVersion: Version?
     var disconnectTimeout: Double?
@@ -44,7 +46,7 @@ public class Connection: ConnectionProtocol {
     public var headers = HTTPHeaders()
     public var keepAliveData: KeepAliveData?
     public var webSocketAllowsSelfSignedSSL = false
-    public internal(set) var sessionManager: SessionManager
+    public internal(set) var sessionManager: Session
 
     public var transport: ClientTransportProtocol?
     public var transportConnectTimeout = 0.0
@@ -68,7 +70,7 @@ public class Connection: ConnectionProtocol {
         return connection.state == .reconnecting
     }
 
-    public init(withUrl url: String, queryString: [String: String]? = nil, sessionManager: SessionManager = .default) {
+    public init(withUrl url: String, queryString: [String: String]? = nil, sessionManager: Session = .default) {
         self.url = url.hasSuffix("/") ? url : url.appending("/")
         self.queryString = queryString
         self.sessionManager = sessionManager
@@ -297,14 +299,9 @@ public class Connection: ConnectionProtocol {
     }
     
     public func getRequest(url: URLConvertible, httpMethod: HTTPMethod, encoding: ParameterEncoding, parameters: Parameters?, timeout: Double, headers: HTTPHeaders) -> DataRequest {
-        var globalHeaders = self.headers
-        globalHeaders["User-Agent"] = self.createUserAgentString(client: "SignalR.Client.iOS")
-
-        for (httpHeader, value) in headers {
-            globalHeaders[httpHeader] = value
-        }
-
-        var urlRequest = try? URLRequest(url: url.asURL(), method: httpMethod, headers: globalHeaders)
+        self.headers.update(name: "User-Agent", value: self.createUserAgentString(client: "SignalR.Client.iOS"))
+        
+        var urlRequest = try? URLRequest(url: url.asURL(), method: httpMethod, headers: self.headers)
         urlRequest?.timeoutInterval = timeout
 
         let encodedURLRequest = try? encoding.encode(urlRequest!, with: parameters)
@@ -316,7 +313,7 @@ public class Connection: ConnectionProtocol {
             self.assemblyVersion = Version(major: 2, minor: 0)
         }
 
-        return "\(client)/\(self.assemblyVersion!) (\(UIDevice.current.localizedModel) \(UIDevice.current.systemVersion))"
+        return "\(Connection.userAgentPrefix) \(client)/\(self.assemblyVersion!) (\(UIDevice.current.localizedModel) \(UIDevice.current.systemVersion))"
     }
 
     public func processResponse(response: Data, shouldReconnect: inout Bool, disconnected: inout Bool) {

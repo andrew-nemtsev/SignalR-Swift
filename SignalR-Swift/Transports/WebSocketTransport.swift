@@ -129,9 +129,9 @@ public class WebSocketTransport: HttpTransport, WebSocketDelegate {
 
             if let encodedRequest = request?.request {
                 self.webSocket = WebSocket(request: encodedRequest)
-                self.webSocket!.disableSSLCertValidation = connection?.webSocketAllowsSelfSignedSSL ?? false
-                self.webSocket!.delegate = self
-                self.webSocket!.connect()
+                //self.webSocket?.disableSSLCertValidation = connection?.webSocketAllowsSelfSignedSSL ?? false
+                self.webSocket?.delegate = self
+                self.webSocket?.connect()
             }
         } catch {
 
@@ -139,31 +139,16 @@ public class WebSocketTransport: HttpTransport, WebSocketDelegate {
     }
 
     func reconnect(connection: ConnectionProtocol?) {
-        _ = BlockOperation { [weak self] in
-            if let strongSelf = self, let connection = connection, Connection.ensureReconnecting(connection: connection) {
-                strongSelf.performConnect(reconnecting: true, completionHandler: nil)
+        BlockOperation { [weak self] in
+            if let self = self, let connection = connection, Connection.ensureReconnecting(connection: connection) {
+                self.performConnect(reconnecting: true, completionHandler: nil)
             }
             }.perform(#selector(BlockOperation.start), with: nil, afterDelay: self.reconnectDelay)
     }
 
     // MARK: - WebSocketDelegate
 
-    public func websocketDidConnect(socket: WebSocketClient){
-        if let connection = self.connectionInfo?.connection, connection.changeState(oldState: .reconnecting, toState: .connected) {
-            connection.didReconnect()
-        }
-    }
-    
-    public func websocketDidDisconnect(socket: WebSocketClient, error: Error?) {
-        if let error = error {
-            webSocketError(error)
-        }
-        else if !self.tryCompleteAbort() {
-            self.reconnect(connection: self.connectionInfo?.connection)
-        }
-    }
-
-    private func webSocketError(_ error: Error) {
+    private func handleWebSocketError(client: WebSocket, error: Error?) {
         if let startClosure = self.startClosure, let connectTimeoutOperation = self.connectTimeoutOperation {
             NSObject.cancelPreviousPerformRequests(withTarget: connectTimeoutOperation, selector: #selector(BlockOperation.start), object: nil)
 
@@ -177,7 +162,7 @@ public class WebSocketTransport: HttpTransport, WebSocketDelegate {
         }
     }
 
-    public func websocketDidReceiveMessage(socket: WebSocketClient, text: String) {
+    private func handleTextMessage(client: WebSocket, text: String) {
         var timedOut = false
         var disconnected = false
 
@@ -199,6 +184,34 @@ public class WebSocketTransport: HttpTransport, WebSocketDelegate {
         }
     }
     
-    public func websocketDidReceiveData(socket: WebSocketClient, data: Data) {
+    public func didReceive(event: WebSocketEvent, client: WebSocket) {
+        switch event {
+        case .connected(_):
+            if let connection = self.connectionInfo?.connection, connection.changeState(oldState: .reconnecting, toState: .connected) {
+                connection.didReconnect()
+            }
+        case .disconnected(_, let code):
+            if code != 0 {
+                handleWebSocketError(client: client, error: nil)
+            } else if !self.tryCompleteAbort() {
+                self.reconnect(connection: self.connectionInfo?.connection)
+            }
+        case .text(let text):
+            handleTextMessage(client: client, text: text)
+        case .binary(let data):
+            print("Received data: \(data.count)")
+        case .ping(_):
+            break
+        case .pong(_):
+            break
+        case .viabilityChanged(_):
+            break
+        case .reconnectSuggested(_):
+            break
+        case .cancelled:
+            break
+        case .error(let error):
+            handleWebSocketError(client: client, error: error)
+        }
     }
 }

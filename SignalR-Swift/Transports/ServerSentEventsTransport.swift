@@ -84,31 +84,33 @@ public class ServerSentEventsTransport: HttpTransport {
                               encoding: URLEncoding.default,
                               parameters: parameters,
                               timeout: 240,
-                              headers: ["Connection": "Keep-Alive"])
+                              headers: ["Connection": "Keep-Alive"]).
+            
+            
         .stream { [weak self] data in
             self?.sseQueue.async { [weak connection] in
-                guard let strongSelf = self, let strongConnection = connection else { return }
+                guard let self = self, let strongConnection = connection else { return }
                 
-                strongSelf.buffer.append(data: data)
+                self.buffer.append(data: data)
                 
-                while let line = strongSelf.buffer.readLine() {
+                while let line = self.buffer.readLine() {
                     guard let message = ServerSentEvent.tryParse(line: line) else { continue }
-                    DispatchQueue.main.async { strongSelf.process(message: message, connection: strongConnection) }
+                    DispatchQueue.main.async { self.process(message: message, connection: strongConnection) }
                 }
             }
         }.validate().response() { [weak self, weak connection] dataResponse in
-            guard let strongSelf = self, let strongConnection = connection else { return }
+            guard let self = self, let strongConnection = connection else { return }
             
-            strongSelf.cancelTimeoutOperation()
+            self.cancelTimeoutOperation()
             
             if let error = dataResponse.error as NSError?, error.code != NSURLErrorCancelled {
                 strongConnection.didReceiveError(error: error)
             }
             
-            if strongSelf.stop {
-                strongSelf.completeAbort()
-            } else if !strongSelf.tryCompleteAbort() && !isReconnecting {
-                strongSelf.reconnect(connection: strongConnection, data: connectionData)
+            if self.stop {
+                self.completeAbort()
+            } else if !self.tryCompleteAbort() && !isReconnecting {
+                self.reconnect(connection: strongConnection, data: connectionData)
             }
         }
     }
