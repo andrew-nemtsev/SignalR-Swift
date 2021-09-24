@@ -299,7 +299,7 @@ public class Connection: ConnectionProtocol {
     }
     
     public func getRequest(url: URLConvertible, httpMethod: HTTPMethod, encoding: ParameterEncoding, parameters: Parameters?, timeout: Double, headers: HTTPHeaders) -> DataRequest {
-        self.headers.update(name: "User-Agent", value: self.createUserAgentString(client: "SignalR.Client.iOS"))
+        updateUserAgent()
         
         var urlRequest = try? URLRequest(url: url.asURL(), method: httpMethod, headers: self.headers)
         urlRequest?.timeoutInterval = timeout
@@ -307,7 +307,29 @@ public class Connection: ConnectionProtocol {
         let encodedURLRequest = try? encoding.encode(urlRequest!, with: parameters)
         return sessionManager.request(encodedURLRequest!)
     }
+    
+    public func getStreamRequest(url: URLConvertible, httpMethod: HTTPMethod, encoding: ParameterEncoding, parameters: Parameters?) -> DataStreamRequest {
+        return self.getStreamRequest(url: url, httpMethod: httpMethod, encoding: encoding, parameters: parameters, timeout: 30.0, headers: [:])
+    }
 
+    public func getStreamRequest(url: URLConvertible, httpMethod: HTTPMethod, encoding: ParameterEncoding, parameters: Parameters?, timeout: Double) -> DataStreamRequest {
+        return self.getStreamRequest(url: url, httpMethod: httpMethod, encoding: encoding, parameters: parameters, timeout: timeout, headers: [:])
+    }
+    
+    public func getStreamRequest(url: URLConvertible, httpMethod: HTTPMethod, encoding: ParameterEncoding, parameters: Parameters?, timeout: Double, headers: HTTPHeaders) -> DataStreamRequest {
+        updateUserAgent()
+        
+        var urlRequest = try? URLRequest(url: url.asURL(), method: httpMethod, headers: self.headers)
+        urlRequest?.timeoutInterval = timeout
+
+        let encodedURLRequest = try? encoding.encode(urlRequest!, with: parameters)
+        return sessionManager.streamRequest(encodedURLRequest!)
+    }
+
+    private func updateUserAgent() {
+        self.headers.update(name: "User-Agent", value: self.createUserAgentString(client: "SignalR.Client.iOS"))
+    }
+    
     func createUserAgentString(client: String) -> String {
         if self.assemblyVersion == nil {
             self.assemblyVersion = Version(major: 2, minor: 0)

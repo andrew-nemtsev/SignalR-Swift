@@ -46,5 +46,8 @@ public protocol ConnectionProtocol: class {
     func getRequest(url: URLConvertible, httpMethod: HTTPMethod, encoding: ParameterEncoding, parameters: Parameters?) -> DataRequest
     func getRequest(url: URLConvertible, httpMethod: HTTPMethod, encoding: ParameterEncoding, parameters: Parameters?, timeout: Double) -> DataRequest
     func getRequest(url: URLConvertible, httpMethod: HTTPMethod, encoding: ParameterEncoding, parameters: Parameters?, timeout: Double, headers: HTTPHeaders) -> DataRequest
+    func getStreamRequest(url: URLConvertible, httpMethod: HTTPMethod, encoding: ParameterEncoding, parameters: Parameters?) -> DataStreamRequest
+    func getStreamRequest(url: URLConvertible, httpMethod: HTTPMethod, encoding: ParameterEncoding, parameters: Parameters?, timeout: Double) -> DataStreamRequest
+    func getStreamRequest(url: URLConvertible, httpMethod: HTTPMethod, encoding: ParameterEncoding, parameters: Parameters?, timeout: Double, headers: HTTPHeaders) -> DataStreamRequest
     func processResponse(response: Data, shouldReconnect: inout Bool, disconnected: inout Bool)
 }

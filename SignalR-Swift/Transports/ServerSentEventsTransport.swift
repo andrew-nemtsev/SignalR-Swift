@@ -79,40 +79,40 @@ public class ServerSentEventsTransport: HttpTransport {
         
         let url = isReconnecting ? connection.url.appending("reconnect") : connection.url.appending("connect")
         
-        connection.getRequest(url: url,
+        connection.getStreamRequest(url: url,
                               httpMethod: .get,
                               encoding: URLEncoding.default,
                               parameters: parameters,
                               timeout: 240,
-                              headers: ["Connection": "Keep-Alive"]).
-            
-            
-        .stream { [weak self] data in
+                              headers: ["Connection": "Keep-Alive"])
+        .responseStream { [weak self] stream in
             self?.sseQueue.async { [weak connection] in
-                guard let self = self, let strongConnection = connection else { return }
+                guard let self = self, let connection = connection else { return }
                 
-                self.buffer.append(data: data)
+                switch stream.event {
+                case let .stream(result):
+                    switch result {
+                    case let .success(data):
+                        self.buffer.append(data: data)
+                        
+                        while let line = self.buffer.readLine() {
+                            guard let message = ServerSentEvent.tryParse(line: line) else { continue }
+                            DispatchQueue.main.async { self.process(message: message, connection: connection) }
+                        }
+                    }
+                case let .complete(_):
+                    break
+                }
                 
-                while let line = self.buffer.readLine() {
-                    guard let message = ServerSentEvent.tryParse(line: line) else { continue }
-                    DispatchQueue.main.async { self.process(message: message, connection: strongConnection) }
+                self.cancelTimeoutOperation()
+                
+                if self.stop {
+                    self.completeAbort()
+                } else if !self.tryCompleteAbort() && !isReconnecting {
+                    self.reconnect(connection: connection, data: connectionData)
                 }
             }
-        }.validate().response() { [weak self, weak connection] dataResponse in
-            guard let self = self, let strongConnection = connection else { return }
-            
-            self.cancelTimeoutOperation()
-            
-            if let error = dataResponse.error as NSError?, error.code != NSURLErrorCancelled {
-                strongConnection.didReceiveError(error: error)
-            }
-            
-            if self.stop {
-                self.completeAbort()
-            } else if !self.tryCompleteAbort() && !isReconnecting {
-                self.reconnect(connection: strongConnection, data: connectionData)
-            }
-        }
+        }.validate()
     }
     
     private func process(message: ServerSentEvent, connection: ConnectionProtocol) {
