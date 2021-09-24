@@ -57,7 +57,7 @@ Pod::Spec.new do |s|
   #  the deployment target. You can optionally include the target after the platform.
   #
 
-  s.platform     = :ios, "8.0"
+  s.platform     = :ios, "10.0"
 
   s.source       = { :git => "https://github.com/AutosoftDMS/SignalR-Swift.git", :tag => "#{s.version}" }
 
