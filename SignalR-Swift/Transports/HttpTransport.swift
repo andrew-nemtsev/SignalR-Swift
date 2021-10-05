@@ -109,10 +109,12 @@ public class HttpTransport: ClientTransportProtocol {
 
         let encodedRequest = connection.getRequest(url: url, httpMethod: .get, encoding: URLEncoding.default, parameters: parameters, timeout: 2.0)
 
-        let request = connection.getRequest(url: encodedRequest.request!.url!.absoluteString, httpMethod: .post, encoding: URLEncoding.httpBody, parameters: nil)
-        request.validate().response { response in
-            if response.error != nil {
-                self.completeAbort()
+        if let req = encodedRequest.request {
+            let request = connection.getRequest(url: req.url!.absoluteString, httpMethod: .post, encoding: URLEncoding.httpBody, parameters: nil)
+            request.validate().response { response in
+                if response.error != nil {
+                    self.completeAbort()
+                }
             }
         }
     }
