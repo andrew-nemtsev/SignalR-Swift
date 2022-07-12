@@ -9,8 +9,11 @@ let package = Package(
                 .tvOS(.v10),
                 .watchOS(.v3)],
     products: [
-	.library(name: "SignalRSwift", targets: ["SignalRSwift"])
+	    .library(name: "SignalRSwift", targets: ["SignalRSwift"])
     ],
+    dependencies: [
+        .package(url: "https://github.com/daltoniam/Starscream.git", majorVersion: 4)
+    ]
     targets: [
         .target(name: "SignalRSwift", path: "SignalR-Swift")
     ]
