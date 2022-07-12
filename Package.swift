@@ -17,7 +17,10 @@ let package = Package(
     targets: [
         .target(name: "SignalRSwift", 
                 path: "SignalR-Swift",
-                dependencies: ["Alamofire", "Starscream"]
+                dependencies: [
+                    .product(name: "Alamofire", package: "Alamofire"),
+                    .product(name: "Starscream", package: "Starscream")
+                    ]
                 )
     ]
 )
