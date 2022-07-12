@@ -15,6 +15,9 @@ let package = Package(
         .package(url: "https://github.com/daltoniam/Starscream.git", from: "4.0.0")
     ],
     targets: [
-        .target(name: "SignalRSwift", path: "SignalR-Swift")
+        .target(name: "SignalRSwift", 
+                path: "SignalR-Swift",
+                dependencies: ["Alamofire", "Starscream"]
+                )
     ]
 )
