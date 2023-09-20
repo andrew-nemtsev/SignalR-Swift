@@ -184,9 +184,9 @@ public class WebSocketTransport: HttpTransport, WebSocketDelegate {
         }
     }
     
-    public func didReceive(event: WebSocketEvent, client: WebSocket) {
+    public func didReceive(event: WebSocketEvent, client: WebSocketClient) {
         switch event {
-        case .connected(_):
+        case .connected:
             if let connection = self.connectionInfo?.connection, connection.changeState(oldState: .reconnecting, toState: .connected) {
                 connection.didReconnect()
             }
@@ -200,18 +200,20 @@ public class WebSocketTransport: HttpTransport, WebSocketDelegate {
             handleTextMessage(client: client, text: text)
         case .binary(let data):
             print("Received data: \(data.count)")
-        case .ping(_):
+        case .ping:
             break
-        case .pong(_):
+        case .pong:
             break
-        case .viabilityChanged(_):
+        case .viabilityChanged:
             break
-        case .reconnectSuggested(_):
+        case .reconnectSuggested:
             break
         case .cancelled:
             break
         case .error(let error):
             handleWebSocketError(client: client, error: error)
+        case .peerClosed:
+            break
         }
     }
 }
